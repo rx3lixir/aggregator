@@ -1,0 +1,14 @@
+services:
+  db:
+    container_name: aggregator-db
+    image: postgres:17.4
+    environment:
+      POSTGRES_USER: rx3lixir
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: aggregator
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata: {}

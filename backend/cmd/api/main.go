@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/rx3lixir/agg-api/config"
+	"github.com/rx3lixir/agg-api/internal/api"
 	"github.com/rx3lixir/agg-api/internal/db"
 	"github.com/rx3lixir/agg-api/internal/lib/logger"
 )
@@ -26,22 +27,16 @@ func main() {
 		log.Error("Failed to initialize config", err)
 	}
 
-	conn, err := db.ConnectPostgres(ctx, cfg)
+	server := api.NewAPIServer(cfg.Server.Address, log)
+	server.Run()
+
+	dbPool, err := db.CreatePostgresPool(ctx, cfg)
 	if err != nil {
 		log.Error("Failed to initialize config", err)
 	}
-	defer conn.Close(ctx)
-
-	// Можно также выполнить простой SQL запрос для проверки
-	var version string
-	err = conn.QueryRow(ctx, "SELECT version()").Scan(&version)
-	if err != nil {
-		log.Error("Failed to query database version", err)
-		return
-	}
+	defer dbPool.Close()
 
 	log.Info("Connection successfully established",
-		"connection_info:", conn.Config().Config,
-		"closed:", conn.IsClosed(),
-		"pg_version:", version)
+		"connection_info:", dbPool.Config().ConnConfig,
+		"closed:", dbPool.Stat())
 }

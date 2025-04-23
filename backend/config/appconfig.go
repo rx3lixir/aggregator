@@ -24,11 +24,16 @@ const (
 type AppConfig struct {
 	Application ApplicationParams `mapstructure:"application_params" validate:"required"`
 	DB          DBParams          `mapstructure:"db_params" validate:"required"`
+	Server      ServerParams      `mapstructure:"server_params" validate:"required"`
 }
 
 // ApplicationParams содержит общие параметры приложения
 type ApplicationParams struct {
 	Env string `mapstructure:"env" validate:"required,oneof=dev prod test"`
+}
+
+type ServerParams struct {
+	Address string `mapstructure:"address" validate:"required"`
 }
 
 // DBParams содержит параметры подключения к базе данных
