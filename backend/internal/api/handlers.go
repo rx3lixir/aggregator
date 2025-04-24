@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/rx3lixir/agg-api/internal/lib/password"
 	"github.com/rx3lixir/agg-api/internal/models"
 )
 
@@ -25,7 +26,13 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 
 	account := models.NewAccount(createAccountReq.FirstName, createAccountReq.LastName, createAccountReq.Email)
 
-	// Вот здесь проблема потому что у store нет этого метода
+	hash, err := password.Hash(createAccountReq.Password)
+	if err != nil {
+		return fmt.Errorf("Failed to hash password: %w", err)
+	}
+
+	account.PasswordHash = hash
+
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}

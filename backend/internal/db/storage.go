@@ -1,6 +1,10 @@
 package db
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rx3lixir/agg-api/internal/models"
 )
@@ -22,7 +26,30 @@ func NewPosgresStore(pool *pgxpool.Pool) *PostgresStore {
 	}
 }
 
-func (s *PostgresStore) CreateAccount(*models.Account) error {
+func (s *PostgresStore) CreateAccount(account *models.Account) error {
+	query := `
+		INSERT INTO account (first_name, last_name, email, password_hash)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at, updated_at
+	`
+
+	// Контекст для регулировки продолжительности операций
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := s.pool.QueryRow(
+		ctx,
+		query,
+		account.FirstName,
+		account.LastName,
+		account.Email,
+		account.PasswordHash,
+	).Scan(&account.ID, &account.CreatedAt, &account.UpdatedAt)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create account: %w", err)
+	}
+
 	return nil
 }
 

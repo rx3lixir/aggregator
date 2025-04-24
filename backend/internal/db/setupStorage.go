@@ -33,9 +33,10 @@ func initSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	tableCreate := `
 		CREATE TABLE IF NOT EXISTS account(
 			id SERIAL PRIMARY KEY,
-			first_name varchar(50),
+			first_name varchar(50) NOT NULL,
 			last_name varchar(50),
-			email varchar(100),
+			email varchar(100) NOT NULL,
+			password_hash varchar(100) NOT NULL,
 			events TEXT,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     	updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

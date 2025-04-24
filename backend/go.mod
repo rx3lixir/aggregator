@@ -8,6 +8,7 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/spf13/viper v1.20.1
+	golang.org/x/crypto v0.37.0
 )
 
 require (
@@ -37,7 +38,6 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect

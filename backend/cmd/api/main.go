@@ -19,24 +19,27 @@ func main() {
 		Format: logger.TextFormat,
 		Output: os.Stdout,
 	}
-
 	log := logger.New(loggerConfig)
 
+	// Загрузка и инициализация конфигурации приложения
 	cfg, err := config.New(log)
 	if err != nil {
 		log.Error("Failed to initialize config", err)
 	}
 
-	server := api.NewAPIServer(cfg.Server.Address, log)
-	server.Run()
-
-	dbPool, err := db.CreatePostgresPool(ctx, cfg)
+	// Создаение пула подключений Postgres
+	pool, err := db.CreatePostgresPool(ctx, cfg)
 	if err != nil {
 		log.Error("Failed to initialize config", err)
 	}
-	defer dbPool.Close()
+	defer pool.Close()
 
-	log.Info("Connection successfully established",
-		"connection_info:", dbPool.Config().ConnConfig,
-		"closed:", dbPool.Stat())
+	// Создаение хранилища с инициализированным пулом подключений
+	store := db.NewPosgresStore(pool)
+
+	log.Info("Хранилище инициализированно", "db", store)
+
+	// Инициализация и запуск сервера с заданными параметрами
+	server := api.NewAPIServer(cfg.Server.Address, log, store)
+	server.Run()
 }
