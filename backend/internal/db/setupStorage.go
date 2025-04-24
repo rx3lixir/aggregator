@@ -31,17 +31,16 @@ func CreatePostgresPool(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Po
 
 func initSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	tableCreate := `
-		CREATE TABLE IF NOT EXISTS events (
+		CREATE TABLE IF NOT EXISTS account(
 			id SERIAL PRIMARY KEY,
-			name TEXT NOT NULL,
-			description TEXT,
-			date TEXT,
-			type TEXT,
+			first_name varchar(50),
+			last_name varchar(50),
+			email varchar(100),
+			events TEXT,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     	updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)
 	`
-
 	_, err := pool.Exec(ctx, tableCreate)
 
 	return err
