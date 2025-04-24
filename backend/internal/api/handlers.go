@@ -5,14 +5,47 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/rx3lixir/agg-api/internal/lib/password"
 	"github.com/rx3lixir/agg-api/internal/models"
 )
 
 // handleGetAccount обрабатывает GET запросы на /account.
-// Возвращает информацию о запрошенном аккаунте.
+// Возвращает информацию обо всех аккаунтах.
 func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
-	return WriteJSON(w, http.StatusOK, "Hi there! You've reached the /account handler")
+	accounts, err := s.store.GetAccounts()
+	if err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusOK, accounts)
+}
+
+// Этот хэндлер нужно помочь реализовать
+func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
+	// Получаем ID из параметра URL
+	idString := chi.URLParam(r, "id")
+
+	// Преобразуем строку ID в число
+	var id int
+
+	if _, err := fmt.Sscanf(idString, "%d", &id); err != nil {
+		return fmt.Errorf("invalid account ID: %s", idString)
+	}
+
+	// Достаем аккаунт из хранилища
+	account, err := s.store.GetAccountByID(id)
+	if err != nil {
+		return fmt.Errorf("failed to get account with ID: %d - %w", id, err)
+	}
+
+	// Если аккаунт не найден - возвращаем 404
+	if account == nil {
+		return WriteJSON(w, http.StatusNotFound, APIError{Error: fmt.Sprintf("account with ID %d not found", id)})
+	}
+
+	// Отправляем на клиент данные
+	return WriteJSON(w, http.StatusOK, account)
 }
 
 // handleCreateAccount обрабатывает POST запросы на /account.
@@ -43,11 +76,5 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 // handleDeleteAccount обрабатывает DELETE запросы на /account.
 // Удаляет указанный аккаунт.
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
-	// TODO: Реализовать удаление аккаунта
-	// 1. Получить ID аккаунта из URL или параметров
-	// 2. Проверить существование аккаунта
-	// 3. Удалить аккаунт
-	// 4. Вернуть результат
-
 	return fmt.Errorf("not implemented yet")
 }

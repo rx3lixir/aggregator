@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rx3lixir/agg-api/internal/models"
 )
@@ -12,6 +13,7 @@ import (
 type Storage interface {
 	CreateAccount(*models.Account) error
 	UpdateAccount(*models.Account) error
+	GetAccounts() ([]*models.Account, error)
 	GetAccountByID(id int) (*models.Account, error)
 	DeleteAccount(id int) error
 }
@@ -33,7 +35,6 @@ func (s *PostgresStore) CreateAccount(account *models.Account) error {
 		RETURNING id, created_at, updated_at
 	`
 
-	// Контекст для регулировки продолжительности операций
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -57,10 +58,63 @@ func (s *PostgresStore) UpdateAccount(*models.Account) error {
 	return nil
 }
 
+func (s *PostgresStore) GetAccounts() ([]*models.Account, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx, "SELECT * FROM account")
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := []*models.Account{}
+
+	for rows.Next() {
+		account, err := scanIntoAccount(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		accounts = append(accounts, account)
+	}
+
+	return accounts, nil
+}
+
 func (s *PostgresStore) GetAccountByID(id int) (*models.Account, error) {
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx, "SELECT * FROM account where id = $1", id)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		return scanIntoAccount(rows)
+	}
+	return nil, fmt.Errorf("account %d", id)
 }
 
 func (s *PostgresStore) DeleteAccount(id int) error {
 	return nil
+}
+
+func scanIntoAccount(rows pgx.Rows) (*models.Account, error) {
+	account := new(models.Account)
+
+	err := rows.Scan(
+		&account.ID,
+		&account.FirstName,
+		&account.LastName,
+		&account.PasswordHash,
+		&account.Email,
+		&account.Events,
+		&account.CreatedAt,
+		&account.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, err
 }

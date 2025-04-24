@@ -1,4 +1,3 @@
-// Package api предоставляет HTTP API сервер и обработчики для работы с аккаунтами.
 package api
 
 import (
@@ -40,6 +39,8 @@ func (s *APIServer) Run() {
 	// Настройка маршрутов для работы с аккаунтами
 	router.Route("/account", func(r chi.Router) {
 		r.Get("/", s.makeHTTPHandleFunc(s.handleGetAccount))
+		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetAccountByID))
+
 		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateAccount))
 		r.Delete("/", s.makeHTTPHandleFunc(s.handleDeleteAccount))
 	})
