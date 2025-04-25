@@ -33,16 +33,15 @@ func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage) *APISe
 
 // Run запускает HTTP сервер с настроенными маршрутами.
 // Также настраивает корректное завершение работы при получении сигнала завершения.
-func (s *APIServer) Run() {
+func (s *APIServer) Run() error {
 	router := chi.NewRouter()
 
 	// Настройка маршрутов для работы с аккаунтами
 	router.Route("/account", func(r chi.Router) {
 		r.Get("/", s.makeHTTPHandleFunc(s.handleGetAccount))
 		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetAccountByID))
-
 		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateAccount))
-		r.Delete("/", s.makeHTTPHandleFunc(s.handleDeleteAccount))
+		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteAccount))
 	})
 
 	// Создаем HTTP сервер с настроенными параметрами
@@ -52,31 +51,36 @@ func (s *APIServer) Run() {
 	}
 
 	// Запускаем сервер в отдельной горутине
+	serverErrors := make(chan error, 1)
 	go func() {
 		s.logger.Info("API server starting", "address", s.listenAddr)
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			s.logger.Fatal("Fatal error starting server", "error", err)
-			os.Exit(1)
+			serverErrors <- err
 		}
 	}()
 
-	// Настраиваем корректное завершение работы сервера
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Блокируем до получения сигнала
-	<-quit
-	s.logger.Info("Shutting down server...")
+	select {
+	case <-quit:
+		s.logger.Info("Shutting down server due to signal...")
+	case err := <-serverErrors:
+		s.logger.Error("Server error occured", "error", err)
+		return err
+	}
 
 	// Создаем контекст с таймаутом для корректного завершения
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := s.server.Shutdown(ctx); err != nil {
-		s.logger.Fatal("Server forced to shutdown: %v", err)
+		s.logger.Warn("Server forced to shutdown", "why", err)
+		return err
 	}
 
 	s.logger.Info("Server gracefully stopped")
+	return nil
 }
 
 // --------- Helpers --------- \\

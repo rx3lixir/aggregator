@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rx3lixir/agg-api/internal/lib/password"
@@ -21,7 +22,6 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 	return WriteJSON(w, http.StatusOK, accounts)
 }
 
-// Этот хэндлер нужно помочь реализовать
 func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request) error {
 	// Получаем ID из параметра URL
 	idString := chi.URLParam(r, "id")
@@ -36,7 +36,7 @@ func (s *APIServer) handleGetAccountByID(w http.ResponseWriter, r *http.Request)
 	// Достаем аккаунт из хранилища
 	account, err := s.store.GetAccountByID(id)
 	if err != nil {
-		return fmt.Errorf("failed to get account with ID: %d - %w", id, err)
+		return err
 	}
 
 	// Если аккаунт не найден - возвращаем 404
@@ -76,5 +76,40 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 // handleDeleteAccount обрабатывает DELETE запросы на /account.
 // Удаляет указанный аккаунт.
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
-	return fmt.Errorf("not implemented yet")
+	id, err := parseAndValidateID(r)
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, APIError{
+			Error: err.Error(),
+		})
+	}
+
+	if err := s.store.DeleteAccount(id); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return WriteJSON(w, http.StatusNotFound, APIError{
+				Error: err.Error(),
+			})
+		}
+		return err
+	}
+
+	return WriteJSON(w, http.StatusOK, map[string]string{"message": fmt.Sprintf("account %d successfully deleted", id)})
+}
+
+// -- Helpers -- \\
+
+// ParseAndValidateID извлекает ID из параметров URL и валидирует его
+func parseAndValidateID(r *http.Request) (int, error) {
+	idString := chi.URLParam(r, "id")
+
+	var id int
+
+	if _, err := fmt.Sscanf(idString, "%d", &id); err != nil {
+		return 0, fmt.Errorf("invalid account ID format: %s", idString)
+	}
+
+	if id <= 0 {
+		return 0, fmt.Errorf("invalid account ID: must be a postive, got %d", id)
+	}
+
+	return id, nil
 }

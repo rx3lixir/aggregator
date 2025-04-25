@@ -96,7 +96,22 @@ func (s *PostgresStore) GetAccountByID(id int) (*models.Account, error) {
 }
 
 func (s *PostgresStore) DeleteAccount(id int) error {
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var exists bool
+
+	err := s.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)", id).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("account with ID %d not found", id)
+	}
+
+	_, err = s.pool.Query(ctx, "DELETE FROM account WHERE id = $1", id)
+	return err
 }
 
 func scanIntoAccount(rows pgx.Rows) (*models.Account, error) {
