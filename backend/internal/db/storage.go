@@ -66,6 +66,7 @@ func (s *PostgresStore) GetAccounts() ([]*models.Account, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	accounts := []*models.Account{}
 
@@ -89,6 +90,8 @@ func (s *PostgresStore) GetAccountByID(id int) (*models.Account, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		return scanIntoAccount(rows)
 	}
@@ -110,7 +113,7 @@ func (s *PostgresStore) DeleteAccount(id int) error {
 		return fmt.Errorf("account with ID %d not found", id)
 	}
 
-	_, err = s.pool.Query(ctx, "DELETE FROM account WHERE id = $1", id)
+	_, err = s.pool.Exec(ctx, "DELETE FROM account WHERE id = $1", id)
 	return err
 }
 
