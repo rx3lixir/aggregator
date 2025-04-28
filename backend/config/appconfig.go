@@ -11,13 +11,14 @@ import (
 
 // Константы для ключей конфигурации
 const (
-	envKey            = "application_params.env"
-	usernameKey       = "db_params.username"
-	passwordKey       = "db_params.password"
-	dbNameKey         = "db_params.db_name"
-	hostKey           = "db_params.host"
-	portKey           = "db_params.port"
-	connectTimeoutKey = "db_params.connect_timeout"
+	envKey              = "application_params.env"
+	usernameKey         = "db_params.username"
+	passwordKey         = "db_params.password"
+	dbNameKey           = "db_params.db_name"
+	hostKey             = "db_params.host"
+	portKey             = "db_params.port"
+	connectTimeoutKey   = "db_params.connect_timeout"
+	requestDbTimeoutKey = "db_params.request_timeout"
 )
 
 // AppConfig представляет конфигурацию всего приложения
@@ -43,7 +44,8 @@ type DBParams struct {
 	DBName         string        `mapstructure:"db_name" validate:"required"`
 	Host           string        `mapstructure:"host" validate:"required"`
 	Port           int           `mapstructure:"port" validate:"required,min=1,max=65535"`
-	ConnectTimeout time.Duration `mapstructure:"connect_timeout" validate:"required,min=1s"`
+	ConnectTimeout time.Duration `mapstructure:"connect_timeout" validate:"required,min=1"`
+	RequestTimeout time.Duration `mapstructure:"request_timeout" validate:"required, min=1"`
 }
 
 // DSN собирает строку подключения к базе данных
@@ -60,6 +62,11 @@ func (db *DBParams) DSN() string {
 		timeoutSec = 10 // Значение по умолчанию, если timeout некорректный
 	}
 
+	reqtimeoutSec := int(db.RequestTimeout.Seconds())
+	if reqtimeoutSec < 1 {
+		reqtimeoutSec = 10 // Значение по умолчанию, если timeout некорректный
+	}
+
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?connect_timeout=%d&sslmode=disable",
 		db.Username,
@@ -74,13 +81,14 @@ func (db *DBParams) DSN() string {
 // EnvBindings возвращает мапу ключей конфигурации и соответствующих им переменных окружения
 func envBindings() map[string]string {
 	return map[string]string{
-		envKey:            "APP_ENV",
-		usernameKey:       "DB_USERNAME",
-		passwordKey:       "DB_PASSWORD",
-		dbNameKey:         "DB_NAME",
-		hostKey:           "DB_HOST",
-		portKey:           "DB_PORT",
-		connectTimeoutKey: "DB_CONNECT_TIMEOUT",
+		envKey:              "APP_ENV",
+		usernameKey:         "DB_USERNAME",
+		passwordKey:         "DB_PASSWORD",
+		dbNameKey:           "DB_NAME",
+		hostKey:             "DB_HOST",
+		portKey:             "DB_PORT",
+		connectTimeoutKey:   "DB_CONNECT_TIMEOUT",
+		requestDbTimeoutKey: "DB_REQ_TIMEOUT",
 	}
 }
 

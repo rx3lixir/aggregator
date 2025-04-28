@@ -20,55 +20,51 @@ type APIServer struct {
 	logger     logger.Logger
 	server     *http.Server
 	store      db.Storage
+	dbContext  context.Context
 }
 
 // NewAPIServer создает новый экземпляр APIServer с указанным адресом.
-func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage) *APIServer {
+func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage, dbContext context.Context) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
 		logger:     log,
 		store:      store,
+		dbContext:  dbContext,
 	}
 }
 
-// Run запускает HTTP сервер с настроенными маршрутами.
-// Также настраивает корректное завершение работы при получении сигнала завершения.
 func (s *APIServer) Run() error {
 	router := chi.NewRouter()
 
-	// Настройка маршрутов для работы с аккаунтами
 	router.Route("/account", func(r chi.Router) {
-		r.Get("/", s.makeHTTPHandleFunc(s.handleGetAccount))
-		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetAccountByID))
-		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateAccount))
-		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteAccount))
+		r.Get("/", s.makeHTTPHandleFunc(s.handleGetUsers))
+		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetUserById))
+		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateUser))
+		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteUser))
 	})
 
-	// Создаем HTTP сервер с настроенными параметрами
 	s.server = &http.Server{
 		Addr:    s.listenAddr,
 		Handler: router,
 	}
 
-	// Запускаем сервер в отдельной горутине
-	serverErrors := make(chan error, 1)
-	go func() {
-		s.logger.Info("API server starting", "address", s.listenAddr)
-		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			serverErrors <- err
-		}
-	}()
-
+	// Настраиваем корректное завершение работы сервера
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	select {
-	case <-quit:
-		s.logger.Info("Shutting down server due to signal...")
-	case err := <-serverErrors:
-		s.logger.Error("Server error occured", "error", err)
-		return err
-	}
+	// Запускаем сервер в отдельной горутине
+	go func() {
+		s.logger.Info("API server starting", "address", s.listenAddr)
+		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			s.logger.Fatal("Fatal error starting server", "error", err)
+
+			quit <- syscall.SIGINT
+		}
+	}()
+
+	// Блокируем до получения сигнала
+	<-quit
+	s.logger.Info("Shutting down server...")
 
 	// Создаем контекст с таймаутом для корректного завершения
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

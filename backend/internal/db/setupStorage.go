@@ -21,28 +21,5 @@ func CreatePostgresPool(ctx context.Context, cfg *config.AppConfig) (*pgxpool.Po
 		return nil, err
 	}
 
-	// Создаем таблцу, если не существует
-	if err = initSchema(c, pool); err != nil {
-		return nil, err
-	}
-
 	return pool, nil
-}
-
-func initSchema(ctx context.Context, pool *pgxpool.Pool) error {
-	tableCreate := `
-		CREATE TABLE IF NOT EXISTS account(
-			id SERIAL PRIMARY KEY,
-			first_name varchar(50) NOT NULL,
-			last_name varchar(50),
-			email varchar(100) NOT NULL,
-			password_hash varchar(100) NOT NULL,
-			events TEXT,
-			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    	updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-		)
-	`
-	_, err := pool.Exec(ctx, tableCreate)
-
-	return err
 }
