@@ -140,7 +140,7 @@ func TestPostgresStore_CreateUser_Success(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-// --- Тест для DeleteUser --- \\
+// --- Тесты для DeleteUser --- \\
 
 func TestPostgresStore_DeleteUser_Success(t *testing.T) {
 	mock, err := pgxmock.NewPool()
@@ -187,4 +187,248 @@ func TestPostgresStore_DeleteUser_NotFound(t *testing.T) {
 	assert.Error(t, err) // Должна быть ошибка, т.к. RowsAffected == 0
 	assert.Contains(t, err.Error(), fmt.Sprintf("user with ID %d not found for deletion", testID))
 	assert.NoError(t, mock.ExpectationsWereMet()) // Ожидание Exec было выполнено, хоть и с 0 результатом
+}
+
+// --- Тесты для GetUsers --- \\
+
+func TestPostgresStore_GetUsers_Success(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("Ошибка создания мока: %v", err)
+	}
+	defer mock.Close()
+
+	now := time.Now()
+
+	user1 := &models.User{
+		Id:        1,
+		Name:      "Kotichek",
+		Email:     "yulia@kisik.ru",
+		Password:  "nikakihklubkov123",
+		IsAdmin:   false,
+		CreatedAt: now.Add(-time.Hour * 24),
+		UpdatedAt: now.Add(-time.Hour),
+	}
+
+	user2 := &models.User{
+		Id:        2,
+		Name:      "mister_KPblC",
+		Email:     "ilovecheese@mail.ru",
+		Password:  "mousetrap3434",
+		IsAdmin:   false,
+		CreatedAt: now.Add(-time.Hour * 9),
+		UpdatedAt: now.Add(-time.Hour),
+	}
+
+	expectedUsers := []*models.User{user1, user2}
+
+	// Определяем столбцы, возвращаемые запросом SELECT *
+	cols := []string{"id", "name", "email", "password", "is_admin", "created_at", "updated_at"}
+
+	rows := pgxmock.NewRows(cols).AddRow(
+		user1.Id,
+		user1.Name,
+		user1.Email,
+		user1.Password,
+		user1.IsAdmin,
+		user1.CreatedAt,
+		user1.UpdatedAt,
+	).AddRow(
+		user2.Id,
+		user2.Name,
+		user2.Email,
+		user2.Password,
+		user2.IsAdmin,
+		user2.CreatedAt,
+		user2.UpdatedAt,
+	)
+
+	expectedSQL := regexp.QuoteMeta("SELECT * FROM users")
+	mock.ExpectQuery(expectedSQL).WillReturnRows(rows)
+
+	store := db.NewPosgresStore(mock)
+	users, err := store.GetUsers(context.Background())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, users)
+	assert.Len(t, users, 2)
+	assert.Equal(t, expectedUsers, users)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgresStore_GetUsers_EmptyResult(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("Ошибка создания мока: %v", err)
+	}
+	defer mock.Close()
+
+	// Пустой набор результатов
+	cols := []string{"id", "name", "email", "password", "is_admin", "created_at", "updated_at"}
+	rows := pgxmock.NewRows(cols)
+
+	expectedSQL := regexp.QuoteMeta("SELECT * FROM users")
+	mock.ExpectQuery(expectedSQL).WillReturnRows(rows)
+
+	store := db.NewPosgresStore(mock)
+	users, err := store.GetUsers(context.Background())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, users)
+	assert.Len(t, users, 0)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgresStore_GetUsers_DatabaseError(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("Ошибка создания мока: %v", err)
+	}
+	defer mock.Close()
+
+	expectedSQL := regexp.QuoteMeta("SELECT * FROM users")
+	mock.ExpectQuery(expectedSQL).WillReturnError(fmt.Errorf("database connection error"))
+
+	store := db.NewPosgresStore(mock)
+	users, err := store.GetUsers(context.Background())
+
+	assert.Error(t, err)
+	assert.Nil(t, users)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgresStore_GetUsers_ScanError(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("Ошибка создания мока: %v", err)
+	}
+	defer mock.Close()
+
+	// Создаем строки с некорректными данными (например, неверный тип)
+	cols := []string{"id", "name", "email", "password", "is_admin", "created_at", "updated_at"}
+	rows := pgxmock.NewRows(cols).
+		AddRow(
+			"not_an_integer", // Неверный тип для id (должно быть int)
+			"User1",
+			"user1@example.com",
+			"password1",
+			false,
+			time.Now(),
+			time.Now(),
+		)
+
+	expectedSQL := regexp.QuoteMeta("SELECT * FROM users")
+	mock.ExpectQuery(expectedSQL).WillReturnRows(rows)
+
+	store := db.NewPosgresStore(mock)
+	users, err := store.GetUsers(context.Background())
+
+	assert.Error(t, err)
+	assert.Nil(t, users)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// --- Тесты для UpdateUser --- \\
+
+func TestPostgresStore_UpdateUser_Success(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("Ошибка создания мока: %v", err)
+	}
+	defer mock.Close()
+
+	userID := 5
+	now := time.Now()
+	updatedUser := &models.User{
+		Id:       userID,
+		Name:     "NewName",
+		Email:    "newemail@example.com",
+		Password: "newpassword",
+		IsAdmin:  false,
+	}
+
+	// Ожидаем проверку существования пользователя
+	existsQuery := regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")
+	mock.ExpectQuery(existsQuery).
+		WithArgs(userID).
+		WillReturnRows(pgxmock.NewRows([]string{"exists"}).AddRow(true))
+
+	// Ожидаем обновление пользователя
+	updateQuery := `UPDATE users SET name = \$1, email = \$2, password = \$3, updated_at = NOW\(\) WHERE id = \$4 RETURNING updated_at`
+	mock.ExpectQuery(updateQuery).
+		WithArgs(updatedUser.Name, updatedUser.Email, updatedUser.Password, updatedUser.Id).
+		WillReturnRows(pgxmock.NewRows([]string{"updated_at"}).AddRow(now))
+
+	store := db.NewPosgresStore(mock)
+	err = store.UpdateUser(context.Background(), updatedUser)
+
+	assert.NoError(t, err)
+	assert.Equal(t, now, updatedUser.UpdatedAt)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgresStore_UpdateUser_NotFound(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("Ошибка создания мока: %v", err)
+	}
+	defer mock.Close()
+
+	userID := 999
+	updatedUser := &models.User{
+		Id:       userID,
+		Name:     "NewName",
+		Email:    "newemail@example.com",
+		Password: "newpassword",
+		IsAdmin:  false,
+	}
+
+	// Ожидаем проверку существования пользователя, который не существует
+	existsQuery := regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")
+	mock.ExpectQuery(existsQuery).
+		WithArgs(userID).
+		WillReturnRows(pgxmock.NewRows([]string{"exists"}).AddRow(false))
+
+	store := db.NewPosgresStore(mock)
+	err = store.UpdateUser(context.Background(), updatedUser)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), fmt.Sprintf("user with ID %d not found", userID))
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgresStore_UpdateUser_DatabaseError(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("Ошибка создания мока: %v", err)
+	}
+	defer mock.Close()
+
+	userID := 5
+	updatedUser := &models.User{
+		Id:       userID,
+		Name:     "NewName",
+		Email:    "newemail@example.com",
+		Password: "newpassword",
+		IsAdmin:  false,
+	}
+
+	// Ожидаем проверку существования пользователя
+	existsQuery := regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")
+	mock.ExpectQuery(existsQuery).
+		WithArgs(userID).
+		WillReturnRows(pgxmock.NewRows([]string{"exists"}).AddRow(true))
+
+	// Ожидаем ошибку при обновлении
+	updateQuery := `UPDATE users SET name = \$1, email = \$2, password = \$3, updated_at = NOW\(\) WHERE id = \$4 RETURNING updated_at`
+	mock.ExpectQuery(updateQuery).
+		WithArgs(updatedUser.Name, updatedUser.Email, updatedUser.Password, updatedUser.Id).
+		WillReturnError(fmt.Errorf("database error"))
+
+	store := db.NewPosgresStore(mock)
+	err = store.UpdateUser(context.Background(), updatedUser)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), fmt.Sprintf("failed to update user %d", userID))
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
