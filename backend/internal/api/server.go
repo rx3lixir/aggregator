@@ -36,11 +36,25 @@ func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage, dbCont
 func (s *APIServer) Run() error {
 	router := chi.NewRouter()
 
-	router.Route("/account", func(r chi.Router) {
+	// Маршруты для пользователей
+	router.Route("/user", func(r chi.Router) {
 		r.Get("/", s.makeHTTPHandleFunc(s.handleGetUsers))
 		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetUserById))
 		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateUser))
 		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteUser))
+	})
+
+	// Маршруты для событий
+	router.Route("/events", func(r chi.Router) {
+		r.Get("/", s.makeHTTPHandleFunc(s.handleGetEvents))
+		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetEventById))
+
+		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateEvent))
+		r.Put("/{id}", s.makeHTTPHandleFunc(s.handleUpdateEvent))
+
+		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteEvent))
+
+		r.Get("/category/{categoryID}", s.makeHTTPHandleFunc(s.handleGetEventsByCategory))
 	})
 
 	s.server = &http.Server{
