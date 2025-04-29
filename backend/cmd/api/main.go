@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	// Базовый контекст приложения
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -39,11 +40,8 @@ func main() {
 	store := db.NewPosgresStore(pool)
 	log.Info("Хранилище инициализированно", "db", store)
 
-	// Создание контекста для запросов к базе данных
-	dbRequestContext, cancel := context.WithTimeout(ctx, cfg.DB.RequestTimeout)
-
 	// Инициализация и запуск сервера с заданными параметрами
-	server := api.NewAPIServer(cfg.Server.Address, log, store, dbRequestContext)
+	server := api.NewAPIServer(cfg.Server.Address, log, store, ctx)
 
 	exitCode := 0
 

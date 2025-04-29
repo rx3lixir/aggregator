@@ -45,26 +45,26 @@ func (s *APIServer) handleGetUserById(w http.ResponseWriter, r *http.Request) er
 
 // handleCreateUser Cоздает новый аккаунт на основе данных из тела запроса.
 func (s *APIServer) handleCreateUser(w http.ResponseWriter, r *http.Request) error {
-	createAccountReq := new(models.CreateUserReq)
+	createUserReq := new(models.CreateUserReq)
 
-	if err := json.NewDecoder(r.Body).Decode(createAccountReq); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(createUserReq); err != nil {
 		return err
 	}
 
-	account := models.NewUser(createAccountReq.Name, createAccountReq.Email, false)
+	newUser := models.NewUser(createUserReq)
 
-	hash, err := password.Hash(createAccountReq.Password)
+	hash, err := password.Hash(createUserReq.Password)
 	if err != nil {
 		return fmt.Errorf("Failed to hash password: %w", err)
 	}
 
-	account.Password = hash
+	newUser.Password = hash
 
-	if err := s.store.CreateUser(s.dbContext, account); err != nil {
+	if err := s.store.CreateUser(s.dbContext, newUser); err != nil {
 		return err
 	}
 
-	return WriteJSON(w, http.StatusOK, account)
+	return WriteJSON(w, http.StatusOK, newUser)
 }
 
 // handleDeleteUser Удаляет указанный аккаунт.
@@ -87,8 +87,6 @@ func (s *APIServer) handleDeleteUser(w http.ResponseWriter, r *http.Request) err
 
 	return WriteJSON(w, http.StatusOK, map[string]string{"message": fmt.Sprintf("user %d successfully deleted", id)})
 }
-
-// -- Helpers -- \\
 
 // ParseAndValidateID извлекает ID из параметров URL и валидирует его
 func parseAndValidateID(r *http.Request) (int, error) {

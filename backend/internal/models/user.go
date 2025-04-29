@@ -1,7 +1,6 @@
 package models
 
 import (
-	"math/rand"
 	"time"
 )
 
@@ -19,7 +18,7 @@ type GetUserRes struct {
 type CreateUserReq struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
-	Password string `json:"-"`
+	Password string `json:"password"`
 	IsAdmin  bool   `json:"is_admin"`
 }
 
@@ -33,12 +32,11 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func NewUser(name, email string, isAdmin bool) *User {
+func NewUser(r *CreateUserReq) *User {
 	return &User{
-		Id:        rand.Intn(1000),
-		Name:      name,
-		Email:     email,
-		IsAdmin:   isAdmin,
+		Name:      r.Name,
+		Email:     r.Email,
+		IsAdmin:   r.IsAdmin,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

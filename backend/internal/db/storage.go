@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -34,7 +35,10 @@ func NewPosgresStore(db DBTX) *PostgresStore {
 	}
 }
 
-func (s *PostgresStore) CreateUser(ctx context.Context, user *models.User) error {
+func (s *PostgresStore) CreateUser(parentCtx context.Context, user *models.User) error {
+	ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
+	defer cancel()
+
 	query := `
 		INSERT INTO users (name, email, password, is_admin)
 		VALUES ($1, $2, $3, $4)
@@ -57,7 +61,10 @@ func (s *PostgresStore) CreateUser(ctx context.Context, user *models.User) error
 	return nil
 }
 
-func (s *PostgresStore) UpdateUser(ctx context.Context, user *models.User) error {
+func (s *PostgresStore) UpdateUser(parentCtx context.Context, user *models.User) error {
+	ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
+	defer cancel()
+
 	var exists bool
 
 	// Проверка есть ли запрашиваемый пользователь
@@ -90,7 +97,10 @@ func (s *PostgresStore) UpdateUser(ctx context.Context, user *models.User) error
 	return err
 }
 
-func (s *PostgresStore) GetUsers(ctx context.Context) ([]*models.User, error) {
+func (s *PostgresStore) GetUsers(parentCtx context.Context) ([]*models.User, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
+	defer cancel()
+
 	rows, err := s.db.Query(ctx, "SELECT * FROM users")
 	if err != nil {
 		return nil, err
@@ -114,7 +124,10 @@ func (s *PostgresStore) GetUsers(ctx context.Context) ([]*models.User, error) {
 	return users, nil
 }
 
-func (s *PostgresStore) GetUserByID(ctx context.Context, id int) (*models.User, error) {
+func (s *PostgresStore) GetUserByID(parentCtx context.Context, id int) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
+	defer cancel()
+
 	row := s.db.QueryRow(ctx, "SELECT id, name, email, password, is_admin, created_at, updated_at FROM users WHERE id = $1", id)
 
 	user := new(models.User)
@@ -138,7 +151,10 @@ func (s *PostgresStore) GetUserByID(ctx context.Context, id int) (*models.User, 
 	return user, nil
 }
 
-func (s *PostgresStore) DeleteUser(ctx context.Context, id int) error {
+func (s *PostgresStore) DeleteUser(parentCtx context.Context, id int) error {
+	ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
+	defer cancel()
+
 	cmdTag, err := s.db.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
 	if err != nil {
 		return fmt.Errorf("failedt to delete user %d: %w", id, err)

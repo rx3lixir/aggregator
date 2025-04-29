@@ -5,7 +5,6 @@ db_params:
   password: password
   db_name: aggregator
   port: 5432
-  connect_timeout: 10
-  request_timeout: 3
+  connect_timeout: 10s
 server_params:
   address: localhost:3000
