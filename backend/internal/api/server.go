@@ -55,7 +55,7 @@ func (s *APIServer) Run() error {
 
 		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteEvent))
 
-		r.Get("/category/{categoryID}", s.makeHTTPHandleFunc(s.handleGetEventsByCategory))
+		r.Get("/category/{categoryId}", s.makeHTTPHandleFunc(s.handleGetEventsByCategory))
 	})
 
 	s.server = &http.Server{

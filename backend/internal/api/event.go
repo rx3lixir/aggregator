@@ -132,7 +132,7 @@ func parseIDFromURL(r *http.Request, paramName string) (int, error) {
 
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		return 0, fmt.Errorf("invalid %s format: %s", paramName, idParam)
+		return 0, fmt.Errorf("invalid %s format: %v", paramName, idParam)
 	}
 
 	if id <= 0 {

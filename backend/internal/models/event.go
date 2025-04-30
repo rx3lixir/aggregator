@@ -6,30 +6,30 @@ import (
 
 // CreateEventReq представляет запрос на создание нового события
 type CreateEventReq struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	CategoryId  int     `json:"category_id"`
-	Date        string  `json:"date"`
-	Time        string  `json:"time"`
-	Location    string  `json:"location"`
-	Price       float64 `json:"price"`
-	Rating      float64 `json:"rating"`
-	Image       string  `json:"image"`
-	Source      string  `json:"source"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CategoryId  int       `json:"category_id"`
+	Date        time.Time `json:"date"`
+	Time        time.Time `json:"time"`
+	Location    string    `json:"location"`
+	Price       float64   `json:"price"`
+	Rating      float64   `json:"rating"`
+	Image       string    `json:"image"`
+	Source      string    `json:"source"`
 }
 
 // UpdateEventReq представляет запрос на обновление существующего события
 type UpdateEventReq struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	CategoryId  int     `json:"category_id"`
-	Date        string  `json:"date"`
-	Time        string  `json:"time"`
-	Location    string  `json:"location"`
-	Price       float64 `json:"price"`
-	Rating      float64 `json:"rating"`
-	Image       string  `json:"image"`
-	Source      string  `json:"source"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CategoryId  int       `json:"category_id"`
+	Date        time.Time `json:"date"`
+	Time        time.Time `json:"time"`
+	Location    string    `json:"location"`
+	Price       float64   `json:"price"`
+	Rating      float64   `json:"rating"`
+	Image       string    `json:"image"`
+	Source      string    `json:"source"`
 }
 
 // Event представляет событие в системе
@@ -38,8 +38,8 @@ type Event struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	CategoryId  int       `json:"category_id"`
-	Date        string    `json:"date"`
-	Time        string    `json:"time"`
+	Date        time.Time `json:"date"`
+	Time        time.Time `json:"time"`
 	Location    string    `json:"location"`
 	Price       float64   `json:"price"`
 	Rating      float64   `json:"rating"`

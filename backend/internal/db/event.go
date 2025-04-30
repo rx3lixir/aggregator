@@ -163,7 +163,7 @@ func (s *PostgresStore) GetEventsByCategory(parentCtx context.Context, categoryI
 
 	query := `SELECT id, name, description, category_id, date, time, location, price, rating, image, source, created_at, updated_at FROM events WHERE category_id = $1`
 
-	rows, err := s.db.Query(ctx, query)
+	rows, err := s.db.Query(ctx, query, categoryID)
 	if err != nil {
 		return nil, err
 	}
