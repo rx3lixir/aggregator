@@ -111,7 +111,7 @@ func (s *PostgresStore) GetEventByID(parentCtx context.Context, id int) (*models
 
 	query := `SELECT id, name, description, category_id, date, time, location, price, rating, image, source, created_at, updated_at FROM events WHERE id = $1`
 
-	row := s.db.QueryRow(ctx, query)
+	row := s.db.QueryRow(ctx, query, id)
 
 	event := new(models.Event)
 

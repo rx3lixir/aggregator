@@ -43,6 +43,36 @@ func (s *APIServer) handleGetUserById(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, user)
 }
 
+// handleCreateUser обновляет аккаунт на основе данных из тела запроса.
+func (s *APIServer) handleUpdateUser(w http.ResponseWriter, r *http.Request) error {
+	id, err := parseAndValidateID(r)
+	if err != nil {
+		return err
+	}
+
+	// Получаем текущего пользователя
+	user, err := s.store.GetUserByID(s.dbContext, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return WriteJSON(w, http.StatusNotFound, APIError{Error: err.Error()})
+		}
+		return err
+	}
+
+	updateReq := new(models.UpdateUserReq)
+	if err := json.NewDecoder(r.Body).Decode(updateReq); err != nil {
+		return err
+	}
+
+	user.UpdateFromReq(updateReq)
+
+	if err := s.store.UpdateUser(s.dbContext, user); err != nil {
+		return err
+	}
+
+	return WriteJSON(w, http.StatusOK, user)
+}
+
 // handleCreateUser Cоздает новый аккаунт на основе данных из тела запроса.
 func (s *APIServer) handleCreateUser(w http.ResponseWriter, r *http.Request) error {
 	createUserReq := new(models.CreateUserReq)

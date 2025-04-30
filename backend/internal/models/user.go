@@ -22,6 +22,13 @@ type CreateUserReq struct {
 	IsAdmin  bool   `json:"is_admin"`
 }
 
+type UpdateUserReq struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	IsAdmin  bool   `json:"is_admin"`
+}
+
 type User struct {
 	Id        int       `json:"id"`
 	Name      string    `json:"name"`
@@ -40,4 +47,12 @@ func NewUser(r *CreateUserReq) *User {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+}
+
+func (u *User) UpdateFromReq(req *UpdateUserReq) {
+	u.Name = req.Name
+	u.Email = req.Email
+	u.Password = req.Password
+	u.IsAdmin = req.IsAdmin
+	u.UpdatedAt = time.Now()
 }

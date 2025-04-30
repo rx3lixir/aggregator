@@ -41,6 +41,7 @@ func (s *APIServer) Run() error {
 		r.Get("/", s.makeHTTPHandleFunc(s.handleGetUsers))
 		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetUserById))
 		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateUser))
+		r.Put("/{id}", s.makeHTTPHandleFunc(s.handleUpdateUser))
 		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteUser))
 	})
 
