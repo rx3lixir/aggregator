@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rx3lixir/agg-api/internal/db"
 	"github.com/rx3lixir/agg-api/internal/lib/logger"
+	"github.com/rx3lixir/agg-api/token"
 )
 
 // APIServer представляет сервер API с настройками и обработчиками.
@@ -21,15 +22,17 @@ type APIServer struct {
 	server     *http.Server
 	store      db.Storage
 	dbContext  context.Context
+	tokenMaker *token.JWTMaker
 }
 
 // NewAPIServer создает новый экземпляр APIServer с указанным адресом.
-func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage, dbContext context.Context) *APIServer {
+func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage, dbContext context.Context, secretKey string) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
 		logger:     log,
 		store:      store,
 		dbContext:  dbContext,
+		tokenMaker: token.NewJWTMaker(secretKey),
 	}
 }
 
@@ -39,21 +42,44 @@ func (s *APIServer) Run() error {
 	// Маршруты для пользователей
 	router.Route("/user", func(r chi.Router) {
 		r.Get("/", s.makeHTTPHandleFunc(s.handleGetUsers))
-		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetUserById))
 		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateUser))
-		r.Put("/{id}", s.makeHTTPHandleFunc(s.handleUpdateUser))
-		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteUser))
+
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", s.makeHTTPHandleFunc(s.handleGetUserById))
+			r.Put("/", s.makeHTTPHandleFunc(s.handleUpdateUser))
+			r.Delete("/", s.makeHTTPHandleFunc(s.handleDeleteUser))
+		})
+
+		r.Route("/login", func(r chi.Router) {
+			r.Post("/", s.makeHTTPHandleFunc(s.handleLoginUser))
+		})
+
+		r.Route("/logout", func(r chi.Router) {
+			r.Post("/", s.makeHTTPHandleFunc(s.handleLogoutUser))
+		})
+
+		r.Route("/tokens", func(r chi.Router) {
+			r.Route("/renew", func(r chi.Router) {
+				r.Post("/", s.makeHTTPHandleFunc(s.handleRenewAcessToken))
+			})
+
+			r.Route("/revoke/{id}", func(r chi.Router) {
+				r.Post("/", s.makeHTTPHandleFunc(s.handleRevokeSession))
+			})
+		})
+
 	})
 
 	// Маршруты для событий
 	router.Route("/events", func(r chi.Router) {
 		r.Get("/", s.makeHTTPHandleFunc(s.handleGetEvents))
-		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetEventById))
-
 		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateEvent))
-		r.Put("/{id}", s.makeHTTPHandleFunc(s.handleUpdateEvent))
 
-		r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteEvent))
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", s.makeHTTPHandleFunc(s.handleGetEventById))
+			r.Put("/", s.makeHTTPHandleFunc(s.handleUpdateEvent))
+			r.Delete("/", s.makeHTTPHandleFunc(s.handleDeleteEvent))
+		})
 
 		r.Get("/category/{categoryId}", s.makeHTTPHandleFunc(s.handleGetEventsByCategory))
 	})

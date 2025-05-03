@@ -126,6 +126,33 @@ func (s *PostgresStore) GetUserByID(parentCtx context.Context, id int) (*models.
 	return user, nil
 }
 
+func (s *PostgresStore) GetUserByEmail(parentCtx context.Context, email string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
+	defer cancel()
+
+	row := s.db.QueryRow(ctx, "SELECT id, name, email, password, is_admin, created_at, updated_at FROM users WHERE email = $1", email)
+
+	user := new(models.User)
+	err := row.Scan(
+		&user.Id,
+		&user.Name,
+		&user.Email,
+		&user.Password,
+		&user.IsAdmin,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("user %v not found", email)
+		}
+		return nil, fmt.Errorf("failed to get user by email %v: %w", email, err)
+	}
+
+	return user, nil
+}
+
 func (s *PostgresStore) DeleteUser(parentCtx context.Context, id int) error {
 	ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
 	defer cancel()

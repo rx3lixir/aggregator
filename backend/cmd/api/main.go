@@ -10,6 +10,8 @@ import (
 	"github.com/rx3lixir/agg-api/internal/lib/logger"
 )
 
+const minSecretKeySize = 32
+
 func main() {
 	// Базовый контекст приложения
 	ctx, cancel := context.WithCancel(context.Background())
@@ -41,7 +43,12 @@ func main() {
 	log.Info("Хранилище инициализированно", "db", store)
 
 	// Инициализация и запуск сервера с заданными параметрами
-	server := api.NewAPIServer(cfg.Server.Address, log, store, ctx)
+	server := api.NewAPIServer(cfg.Server.Address, log, store, ctx, cfg.Server.SecretKey)
+
+	if len(*&cfg.Server.SecretKey) < minSecretKeySize {
+		log.Error("SECRET_KEY must be at least %d characters", minSecretKeySize)
+		os.Exit(1)
+	}
 
 	exitCode := 0
 

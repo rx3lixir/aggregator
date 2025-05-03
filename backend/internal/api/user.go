@@ -43,7 +43,7 @@ func (s *APIServer) handleGetUserById(w http.ResponseWriter, r *http.Request) er
 	return WriteJSON(w, http.StatusOK, user)
 }
 
-// handleCreateUser обновляет аккаунт на основе данных из тела запроса.
+// handleUpdateUser обновляет аккаунт на основе данных из тела запроса.
 func (s *APIServer) handleUpdateUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := parseAndValidateID(r)
 	if err != nil {

@@ -24,6 +24,7 @@ type Storage interface {
 	UpdateUser(ctx context.Context, user *models.User) error
 	GetUsers(ctx context.Context) ([]*models.User, error)
 	GetUserByID(ctx context.Context, id int) (*models.User, error)
+	GetUserByEmail(parentCtx context.Context, email string) (*models.User, error)
 	DeleteUser(ctx context.Context, id int) error
 
 	// Методы для Event
@@ -40,6 +41,12 @@ type Storage interface {
 	GetCategoryByID(ctx context.Context, id int) (*models.Category, error)
 	UpdateCategory(ctx context.Context, category *models.Category) error
 	DeleteCategory(ctx context.Context, id int) error
+
+	// Методы для Session
+	CreateSession(parentContext context.Context, session *models.Session) (*models.Session, error)
+	GetSession(parentContext context.Context, id string) (*models.Session, error)
+	RevokeSession(parentCtx context.Context, id string) error
+	DeleteSession(parentCtx context.Context, id string) error
 }
 
 type PostgresStore struct {

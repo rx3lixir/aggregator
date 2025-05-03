@@ -25,3 +25,7 @@ func HashWithCost(password string, cost int) (string, error) {
 	}
 	return string(hashedBytes), nil
 }
+
+func CheckPassword(password string, hashedPassword string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+}

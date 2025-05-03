@@ -18,6 +18,7 @@ const (
 	hostKey           = "db_params.host"
 	portKey           = "db_params.port"
 	connectTimeoutKey = "db_params.connect_timeout"
+	secretKey         = "server_params.secret_key"
 )
 
 // AppConfig представляет конфигурацию всего приложения
@@ -33,7 +34,8 @@ type ApplicationParams struct {
 }
 
 type ServerParams struct {
-	Address string `mapstructure:"address" validate:"required"`
+	Address   string `mapstructure:"address" validate:"required"`
+	SecretKey string `mapstructure:"secret_key" validate:"required"`
 }
 
 // DBParams содержит параметры подключения к базе данных
@@ -81,6 +83,7 @@ func envBindings() map[string]string {
 		hostKey:           "DB_HOST",
 		portKey:           "DB_PORT",
 		connectTimeoutKey: "DB_CONNECT_TIMEOUT",
+		secretKey:         "SECRET_KEY",
 	}
 }
 
@@ -107,6 +110,7 @@ func New(log logger.Logger) (*AppConfig, error) {
 	}
 
 	var config AppConfig
+
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("ошибка при декодировании конфигурации: %w", err)
 	}
@@ -118,6 +122,7 @@ func New(log logger.Logger) (*AppConfig, error) {
 
 	// Валидация конфигурации
 	validate := validator.New()
+
 	if err := validate.Struct(config); err != nil {
 		return nil, fmt.Errorf("ошибка валидации конфигурации: %w", err)
 	}
