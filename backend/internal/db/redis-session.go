@@ -28,14 +28,14 @@ func NewRedisStore(redisURL string, ctx context.Context) (*RedisStore, error) {
 
 	client := redis.NewClient(opts)
 
-	if err := client.Ping(ctx); err != nil {
+	// Проверка соединения с Redis
+	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("failed to connect to Redis: %v", err)
 	}
 
 	return &RedisStore{
 		client: client,
 	}, nil
-
 }
 
 func (s *RedisStore) Close() error {
@@ -44,6 +44,11 @@ func (s *RedisStore) Close() error {
 
 // CreateSession создает новую сессию в Redis
 func (s *RedisStore) CreateSession(ctx context.Context, session *models.Session) (*models.Session, error) {
+	// Если время создания не установлено, устанавливаем текущее время
+	if session.CreatedAt.IsZero() {
+		session.CreatedAt = time.Now()
+	}
+
 	sessionData, err := json.Marshal(session)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal session: %w", err)
@@ -76,12 +81,11 @@ func (s *RedisStore) GetSession(ctx context.Context, id string) (*models.Session
 	}
 
 	var session models.Session
-
 	if err := json.Unmarshal([]byte(sessionData), &session); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal session data: %w", err)
 	}
 
-	return &session, err
+	return &session, nil
 }
 
 // RevokeSession отзывает сессию, добавляя токен в черный список
@@ -103,7 +107,7 @@ func (s *RedisStore) RevokeSession(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to add token to blacklist: %w", err)
 	}
 
-	// Обновляем статус сесии
+	// Обновляем статус сессии
 	session.IsRevoked = true
 
 	// Сохраняем обновленную сессию
@@ -113,8 +117,8 @@ func (s *RedisStore) RevokeSession(ctx context.Context, id string) error {
 	}
 
 	key := sessionPrefix + id
-	if err := s.client.Set(ctx, key, sessionData, ttl); err != nil {
-		return fmt.Errorf("failed to update session in Redis: %v", err)
+	if err := s.client.Set(ctx, key, sessionData, ttl).Err(); err != nil {
+		return fmt.Errorf("failed to update session in Redis: %w", err)
 	}
 
 	return nil
@@ -135,14 +139,14 @@ func (s *RedisStore) DeleteSession(ctx context.Context, id string) error {
 		ttl = time.Minute
 	}
 
-	if err := s.client.Set(ctx, blacklistKey, "deleted", ttl); err != nil {
-		return fmt.Errorf("failed to add token to blacklist: %v", err)
+	if err := s.client.Set(ctx, blacklistKey, "deleted", ttl).Err(); err != nil {
+		return fmt.Errorf("failed to add token to blacklist: %w", err)
 	}
 
 	// Удаляем сессию
 	key := sessionPrefix + id
 	if err := s.client.Del(ctx, key).Err(); err != nil {
-		return fmt.Errorf("failed to delete session from Redis: %v", err)
+		return fmt.Errorf("failed to delete session from Redis: %w", err)
 	}
 
 	return nil

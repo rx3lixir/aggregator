@@ -25,6 +25,7 @@ type SessionStorage interface {
 	RevokeSession(ctx context.Context, id string) error
 	DeleteSession(ctx context.Context, id string) error
 	IsTokenBlacklisted(ctx context.Context, token string) (bool, error)
+	Close() error
 }
 
 type Storage interface {
@@ -56,9 +57,6 @@ type Storage interface {
 	GetSession(parentContext context.Context, id string) (*models.Session, error)
 	RevokeSession(parentCtx context.Context, id string) error
 	DeleteSession(parentCtx context.Context, id string) error
-
-	// Хранилище сессий
-	SessionStorage
 }
 
 type PostgresStore struct {

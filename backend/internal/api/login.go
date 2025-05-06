@@ -43,7 +43,7 @@ func (s *APIServer) handleLoginUser(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 
-	session, err := s.store.CreateSession(s.dbContext, &models.Session{
+	session, err := s.sessions.CreateSession(s.dbContext, &models.Session{
 		Id:           refreshClaims.RegisteredClaims.ID,
 		UserEmail:    user.Email,
 		RefreshToken: refreshToken,
@@ -79,7 +79,7 @@ func (s *APIServer) handleLogoutUser(w http.ResponseWriter, r *http.Request) err
 		return fmt.Errorf("failed to extract id %s", id)
 	}
 
-	err := s.store.DeleteSession(s.dbContext, id)
+	err := s.sessions.DeleteSession(s.dbContext, id)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error deleting session")
 		return err
@@ -98,20 +98,32 @@ func (s *APIServer) handleRenewAcessToken(w http.ResponseWriter, r *http.Request
 		return err
 	}
 
+	// Проверка, не находится ли токен в черном списке
+	isBlacklisted, err := s.sessions.IsTokenBlacklisted(s.dbContext, req.RefershToken)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, "error checking token status")
+		return err
+	}
+
+	if isBlacklisted {
+		WriteJSON(w, http.StatusUnauthorized, "token is revoked")
+		return fmt.Errorf("token is blacklisted")
+	}
+
 	refreshClaims, err := s.tokenMaker.VerifyToken(req.RefershToken)
 	if err != nil {
 		WriteJSON(w, http.StatusUnauthorized, "error verifying token")
 		return err
 	}
 
-	session, err := s.store.GetSession(s.dbContext, refreshClaims.RegisteredClaims.ID)
+	session, err := s.sessions.GetSession(s.dbContext, refreshClaims.RegisteredClaims.ID)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error getting session")
 		return err
 	}
 
 	if session.IsRevoked {
-		WriteJSON(w, http.StatusUnauthorized, "session is allredy revoked")
+		WriteJSON(w, http.StatusUnauthorized, "session is already revoked")
 		return nil
 	}
 
@@ -143,7 +155,7 @@ func (s *APIServer) handleRevokeSession(w http.ResponseWriter, r *http.Request) 
 		return fmt.Errorf("failed to parse id %s", id)
 	}
 
-	err := s.store.RevokeSession(s.dbContext, id)
+	err := s.sessions.RevokeSession(s.dbContext, id)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error revoking session")
 		return err

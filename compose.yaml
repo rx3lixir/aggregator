@@ -1,3 +1,5 @@
+# Дата: 2025-04-26
+version: '3.8'
 services:
   db:
     container_name: aggregator-db
@@ -7,8 +9,23 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: aggregator
     ports:
-      - 5432:5432
+      - "5432:5432" # Проброс порта для возможного подключения с хоста
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # Добавляем healthcheck, чтобы сервис миграций мог дождаться готовности БД
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rx3lixir -d aggregator"]
+      interval: 5s # Как часто проверять
+      timeout: 5s # Сколько ждать ответа
+      retries: 5 # Сколько раз пытаться
+  redis:
+    container_name: aggregator-redis
+    image: redis:7.2
+    ports:
+      - 6379:6379
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
 volumes:
   pgdata: {}
+  redisdata: {}

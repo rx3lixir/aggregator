@@ -42,8 +42,16 @@ func main() {
 	store := db.NewPosgresStore(pool)
 	log.Info("Хранилище инициализированно", "db", store)
 
+	// Создание Redis хранилища
+	redisStore, err := db.NewRedisStore(cfg.Redis.RedisURL(), ctx)
+	if err != nil {
+		log.Error("Failed to initialize Redis store", err)
+		os.Exit(1)
+	}
+	log.Info("Redis хранилище инициализированно")
+
 	// Инициализация и запуск сервера с заданными параметрами
-	server := api.NewAPIServer(cfg.Server.Address, log, store, ctx, cfg.Server.SecretKey)
+	server := api.NewAPIServer(cfg.Server.Address, log, store, redisStore, ctx, cfg.Server.SecretKey)
 
 	if len(*&cfg.Server.SecretKey) < minSecretKeySize {
 		log.Error("SECRET_KEY must be at least %d characters", minSecretKeySize)
