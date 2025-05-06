@@ -19,12 +19,15 @@ const (
 	portKey           = "db_params.port"
 	connectTimeoutKey = "db_params.connect_timeout"
 	secretKey         = "server_params.secret_key"
+	redisURLKey       = "redis_params.url"
+	redisPasswordKey  = "redis_params.password"
 )
 
 // AppConfig представляет конфигурацию всего приложения
 type AppConfig struct {
 	Application ApplicationParams `mapstructure:"application_params" validate:"required"`
 	DB          DBParams          `mapstructure:"db_params" validate:"required"`
+	Redis       RedisParams       `mapstructure:"redis_params" validate:"required"`
 	Server      ServerParams      `mapstructure:"server_params" validate:"required"`
 }
 
@@ -46,6 +49,11 @@ type DBParams struct {
 	Host           string        `mapstructure:"host" validate:"required"`
 	Port           int           `mapstructure:"port" validate:"required,min=1,max=65535"`
 	ConnectTimeout time.Duration `mapstructure:"connect_timeout" validate:"required,min=1"`
+}
+
+type RedisParams struct {
+	URL      string `mapstructure:"url" validate:"required"`
+	Password string `mapstructure:"password"`
 }
 
 // DSN собирает строку подключения к базе данных
@@ -73,6 +81,24 @@ func (db *DBParams) DSN() string {
 	)
 }
 
+// RedisURL формирует полный URL для подключения к Redis
+func (r *RedisParams) RedisURL() string {
+	if r.Password != "" {
+		// Если URL уже содержит схему, добавляем пароль
+		if len(r.URL) > 6 && r.URL[:6] == "redis:" {
+			return fmt.Sprintf("redis://:%s@%s", r.Password, r.URL[8:])
+		}
+		return fmt.Sprintf("redis://:%s@%s", r.Password, r.URL)
+	}
+
+	// Если URL уже содержит схему, возвращаем как есть
+	if len(r.URL) > 6 && r.URL[:6] == "redis:" {
+		return r.URL
+	}
+
+	return fmt.Sprintf("redis://%s", r.URL)
+}
+
 // EnvBindings возвращает мапу ключей конфигурации и соответствующих им переменных окружения
 func envBindings() map[string]string {
 	return map[string]string{
@@ -84,6 +110,8 @@ func envBindings() map[string]string {
 		portKey:           "DB_PORT",
 		connectTimeoutKey: "DB_CONNECT_TIMEOUT",
 		secretKey:         "SECRET_KEY",
+		redisURLKey:       "REDIS_URL",
+		redisPasswordKey:  "REDIS_PASSWORD",
 	}
 }
 

@@ -18,6 +18,15 @@ type DBTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
+// SessionStorage определяет интерфейс для работы с сессиями
+type SessionStorage interface {
+	CreateSession(ctx context.Context, session *models.Session) (*models.Session, error)
+	GetSession(ctx context.Context, id string) (*models.Session, error)
+	RevokeSession(ctx context.Context, id string) error
+	DeleteSession(ctx context.Context, id string) error
+	IsTokenBlacklisted(ctx context.Context, token string) (bool, error)
+}
+
 type Storage interface {
 	// Методы для User
 	CreateUser(ctx context.Context, user *models.User) error
@@ -47,6 +56,9 @@ type Storage interface {
 	GetSession(parentContext context.Context, id string) (*models.Session, error)
 	RevokeSession(parentCtx context.Context, id string) error
 	DeleteSession(parentCtx context.Context, id string) error
+
+	// Хранилище сессий
+	SessionStorage
 }
 
 type PostgresStore struct {

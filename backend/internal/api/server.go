@@ -21,16 +21,18 @@ type APIServer struct {
 	logger     logger.Logger
 	server     *http.Server
 	store      db.Storage
+	sessions   db.SessionStorage
 	dbContext  context.Context
 	tokenMaker *token.JWTMaker
 }
 
 // NewAPIServer создает новый экземпляр APIServer с указанным адресом.
-func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage, dbContext context.Context, secretKey string) *APIServer {
+func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage, sessions db.SessionStorage, dbContext context.Context, secretKey string) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
 		logger:     log,
 		store:      store,
+		sessions:   sessions,
 		dbContext:  dbContext,
 		tokenMaker: token.NewJWTMaker(secretKey),
 	}
