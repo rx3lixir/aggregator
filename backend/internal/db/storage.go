@@ -51,12 +51,6 @@ type Storage interface {
 	GetCategoryByID(ctx context.Context, id int) (*models.Category, error)
 	UpdateCategory(ctx context.Context, category *models.Category) error
 	DeleteCategory(ctx context.Context, id int) error
-
-	// Методы для Session
-	CreateSession(parentContext context.Context, session *models.Session) (*models.Session, error)
-	GetSession(parentContext context.Context, id string) (*models.Session, error)
-	RevokeSession(parentCtx context.Context, id string) error
-	DeleteSession(parentCtx context.Context, id string) error
 }
 
 type PostgresStore struct {

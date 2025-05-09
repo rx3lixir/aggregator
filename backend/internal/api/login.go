@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/rx3lixir/agg-api/internal/lib/password"
 	"github.com/rx3lixir/agg-api/internal/models"
+	"github.com/rx3lixir/agg-api/token"
 )
 
 func (s *APIServer) handleLoginUser(w http.ResponseWriter, r *http.Request) error {
@@ -31,13 +31,13 @@ func (s *APIServer) handleLoginUser(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 
-	accessToken, accessClaims, err := s.tokenMaker.CreateToken(user.Id, user.Email, user.IsAdmin, time.Minute*15)
+	accessToken, accessClaims, err := s.TokenMaker.CreateToken(user.Id, user.Email, user.IsAdmin, time.Minute*15)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error creating token")
 		return err
 	}
 
-	refreshToken, refreshClaims, err := s.tokenMaker.CreateToken(user.Id, user.Email, user.IsAdmin, time.Hour*24)
+	refreshToken, refreshClaims, err := s.TokenMaker.CreateToken(user.Id, user.Email, user.IsAdmin, time.Hour*24)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error creating token")
 		return err
@@ -73,13 +73,9 @@ func (s *APIServer) handleLoginUser(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (s *APIServer) handleLogoutUser(w http.ResponseWriter, r *http.Request) error {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		WriteJSON(w, http.StatusBadRequest, "missing or invalid session id")
-		return fmt.Errorf("failed to extract id %s", id)
-	}
+	claims := r.Context().Value(authKey{}).(*token.UserClaims)
 
-	err := s.sessions.DeleteSession(s.dbContext, id)
+	err := s.sessions.DeleteSession(s.dbContext, claims.RegisteredClaims.ID)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error deleting session")
 		return err
@@ -110,7 +106,7 @@ func (s *APIServer) handleRenewAcessToken(w http.ResponseWriter, r *http.Request
 		return fmt.Errorf("token is blacklisted")
 	}
 
-	refreshClaims, err := s.tokenMaker.VerifyToken(req.RefershToken)
+	refreshClaims, err := s.TokenMaker.VerifyToken(req.RefershToken)
 	if err != nil {
 		WriteJSON(w, http.StatusUnauthorized, "error verifying token")
 		return err
@@ -132,7 +128,7 @@ func (s *APIServer) handleRenewAcessToken(w http.ResponseWriter, r *http.Request
 		return nil
 	}
 
-	accessToken, accessClaims, err := s.tokenMaker.CreateToken(refreshClaims.Id, refreshClaims.Email, refreshClaims.IsAdmin, time.Minute*15)
+	accessToken, accessClaims, err := s.TokenMaker.CreateToken(refreshClaims.Id, refreshClaims.Email, refreshClaims.IsAdmin, time.Minute*15)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error creating token")
 		return nil
@@ -149,13 +145,9 @@ func (s *APIServer) handleRenewAcessToken(w http.ResponseWriter, r *http.Request
 }
 
 func (s *APIServer) handleRevokeSession(w http.ResponseWriter, r *http.Request) error {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		http.Error(w, "missing session ID", http.StatusBadRequest)
-		return fmt.Errorf("failed to parse id %s", id)
-	}
+	claims := r.Context().Value(authKey{}).(*token.UserClaims)
 
-	err := s.sessions.RevokeSession(s.dbContext, id)
+	err := s.sessions.RevokeSession(s.dbContext, claims.RegisteredClaims.ID)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, "error revoking session")
 		return err

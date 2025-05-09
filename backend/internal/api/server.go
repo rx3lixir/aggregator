@@ -23,7 +23,7 @@ type APIServer struct {
 	store      db.Storage
 	sessions   db.SessionStorage
 	dbContext  context.Context
-	tokenMaker *token.JWTMaker
+	TokenMaker *token.JWTMaker
 }
 
 // NewAPIServer создает новый экземпляр APIServer с указанным адресом.
@@ -34,56 +34,64 @@ func NewAPIServer(listenAddr string, log logger.Logger, store db.Storage, sessio
 		store:      store,
 		sessions:   sessions,
 		dbContext:  dbContext,
-		tokenMaker: token.NewJWTMaker(secretKey),
+		TokenMaker: token.NewJWTMaker(secretKey),
 	}
 }
 
 func (s *APIServer) Run() error {
 	router := chi.NewRouter()
 
-	// Маршруты для пользователей
+	tokenMaker := s.TokenMaker
+
+	// --- ПОЛЬЗОВАТЕЛИ --- \\
 	router.Route("/user", func(r chi.Router) {
-		r.Get("/", s.makeHTTPHandleFunc(s.handleGetUsers))
+		// Публичные маршруты для пользователей
 		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateUser))
+		r.Post("/login", s.makeHTTPHandleFunc(s.handleLoginUser))
 
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", s.makeHTTPHandleFunc(s.handleGetUserById))
-			r.Put("/", s.makeHTTPHandleFunc(s.handleUpdateUser))
-			r.Delete("/", s.makeHTTPHandleFunc(s.handleDeleteUser))
+		// Управление пользователями (только для админов)
+		r.Group(func(r chi.Router) {
+			r.Use(GetAdminAuthMiddleWareFunc(tokenMaker))
+			r.Get("/", s.makeHTTPHandleFunc(s.handleGetUsers))
+			r.Delete("/{id}", s.makeHTTPHandleFunc(s.handleDeleteUser))
 		})
 
-		r.Route("/login", func(r chi.Router) {
-			r.Post("/", s.makeHTTPHandleFunc(s.handleLoginUser))
+		// Действия залогиненного пользователя
+		r.Group(func(r chi.Router) {
+			r.Use(GetAuthMiddleWareFunc(tokenMaker))
+
+			r.Route("/{id}", func(r chi.Router) {
+				r.Put("/", s.makeHTTPHandleFunc(s.handleUpdateUser))
+				r.Get("/", s.makeHTTPHandleFunc(s.handleGetUserById))
+			})
+			r.Post("/logout", s.makeHTTPHandleFunc(s.handleLogoutUser))
 		})
 
-		r.Route("/logout", func(r chi.Router) {
-			r.Post("/", s.makeHTTPHandleFunc(s.handleLogoutUser))
-		})
-
+		// Управление токенами (только для админов)
 		r.Route("/tokens", func(r chi.Router) {
-			r.Route("/renew", func(r chi.Router) {
-				r.Post("/", s.makeHTTPHandleFunc(s.handleRenewAcessToken))
-			})
-
-			r.Route("/revoke/{id}", func(r chi.Router) {
-				r.Post("/", s.makeHTTPHandleFunc(s.handleRevokeSession))
-			})
+			r.Use(GetAdminAuthMiddleWareFunc(tokenMaker))
+			r.Post("/renew", s.makeHTTPHandleFunc(s.handleRenewAcessToken))
+			r.Post("/revoke", s.makeHTTPHandleFunc(s.handleRevokeSession))
 		})
-
 	})
 
-	// Маршруты для событий
+	// --- СОБЫТИЯ --- \\
 	router.Route("/events", func(r chi.Router) {
+		// Публичные маршруты для событий
 		r.Get("/", s.makeHTTPHandleFunc(s.handleGetEvents))
-		r.Post("/", s.makeHTTPHandleFunc(s.handleCreateEvent))
-
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", s.makeHTTPHandleFunc(s.handleGetEventById))
-			r.Put("/", s.makeHTTPHandleFunc(s.handleUpdateEvent))
-			r.Delete("/", s.makeHTTPHandleFunc(s.handleDeleteEvent))
-		})
-
+		r.Get("/{id}", s.makeHTTPHandleFunc(s.handleGetEventById))
 		r.Get("/category/{categoryId}", s.makeHTTPHandleFunc(s.handleGetEventsByCategory))
+
+		// Защищенные маршруты для событий (только для админов)
+		r.Group(func(r chi.Router) {
+			r.Use(GetAdminAuthMiddleWareFunc(tokenMaker))
+			r.Post("/", s.makeHTTPHandleFunc(s.handleCreateEvent))
+
+			r.Route("/{id}", func(r chi.Router) {
+				r.Put("/", s.makeHTTPHandleFunc(s.handleUpdateEvent))
+				r.Delete("/", s.makeHTTPHandleFunc(s.handleDeleteEvent))
+			})
+		})
 	})
 
 	s.server = &http.Server{
@@ -100,7 +108,6 @@ func (s *APIServer) Run() error {
 		s.logger.Info("API server starting", "address", s.listenAddr)
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			s.logger.Fatal("Fatal error starting server", "error", err)
-
 			quit <- syscall.SIGINT
 		}
 	}()

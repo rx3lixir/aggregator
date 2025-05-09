@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rx3lixir/agg-api/internal/lib/password"
 	"github.com/rx3lixir/agg-api/internal/models"
+	"github.com/rx3lixir/agg-api/token"
 )
 
 // handleGetUsers возвращает информацию обо всех аккаунтах.
@@ -45,13 +46,10 @@ func (s *APIServer) handleGetUserById(w http.ResponseWriter, r *http.Request) er
 
 // handleUpdateUser обновляет аккаунт на основе данных из тела запроса.
 func (s *APIServer) handleUpdateUser(w http.ResponseWriter, r *http.Request) error {
-	id, err := parseAndValidateID(r)
-	if err != nil {
-		return err
-	}
+	claims := r.Context().Value(authKey{}).(*token.UserClaims)
 
 	// Получаем текущего пользователя
-	user, err := s.store.GetUserByID(s.dbContext, id)
+	user, err := s.store.GetUserByEmail(s.dbContext, claims.Email)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return WriteJSON(w, http.StatusNotFound, APIError{Error: err.Error()})
@@ -64,7 +62,29 @@ func (s *APIServer) handleUpdateUser(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
+	if updateReq.Email == "" {
+		updateReq.Email = user.Email
+	}
+
+	if updateReq.Name == "" {
+		updateReq.Name = user.Name
+	}
+
+	if updateReq.Password == "" {
+		hashed, err := password.Hash(updateReq.Password)
+		if err != nil {
+			panic(err)
+		}
+		user.Password = hashed
+
+		updateReq.Name = user.Password
+	}
+
 	user.UpdateFromReq(updateReq)
+
+	if user.Email == "" {
+		user.Email = claims.Email
+	}
 
 	if err := s.store.UpdateUser(s.dbContext, user); err != nil {
 		return err
