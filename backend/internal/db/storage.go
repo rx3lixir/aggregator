@@ -28,29 +28,39 @@ type SessionStorage interface {
 	Close() error
 }
 
-type Storage interface {
-	// Методы для User
+// Методы для User
+type UserStore interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	UpdateUser(ctx context.Context, user *models.User) error
 	GetUsers(ctx context.Context) ([]*models.User, error)
 	GetUserByID(ctx context.Context, id int) (*models.User, error)
 	GetUserByEmail(parentCtx context.Context, email string) (*models.User, error)
 	DeleteUser(ctx context.Context, id int) error
+}
 
-	// Методы для Event
+// Методы для Event
+type EventStore interface {
 	CreateEvent(ctx context.Context, event *models.Event) error
 	UpdateEvent(ctx context.Context, event *models.Event) error
 	GetEvents(ctx context.Context) ([]*models.Event, error)
 	GetEventByID(ctx context.Context, id int) (*models.Event, error)
 	DeleteEvent(ctx context.Context, id int) error
 	GetEventsByCategory(ctx context.Context, categoryID int) ([]*models.Event, error)
+}
 
-	// Методы для Categories
+// Методы для Categories
+type CategoryStore interface {
 	CreateCategory(ctx context.Context, category *models.Category) error
 	GetCategories(ctx context.Context) ([]*models.Category, error)
 	GetCategoryByID(ctx context.Context, id int) (*models.Category, error)
 	UpdateCategory(ctx context.Context, category *models.Category) error
 	DeleteCategory(ctx context.Context, id int) error
+}
+
+type Storage interface {
+	UserStore
+	EventStore
+	CategoryStore
 }
 
 type PostgresStore struct {

@@ -25,7 +25,7 @@ func main() {
 	log := logger.New(loggerConfig)
 
 	// Загрузка и инициализация конфигурации приложения
-	cfg, err := config.New(log)
+	cfg, err := config.New()
 	if err != nil {
 		log.Error("Failed to initialize config", err)
 		os.Exit(1)

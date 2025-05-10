@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/rx3lixir/agg-api/agg-grpc/pb";
+
+import "google/protobuf/timestamp.proto";
+
+message EventReq {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  int64 categoryID = 4;
+  google.protobuf.Timestamp time = 5;
+  google.protobuf.Timestamp date = 6;
+  string location = 7;
+  float price = 8;
+  string image = 9;
+  string source = 10;
+}
+
+message EventRes {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  int64 categoryID = 4;
+  google.protobuf.Timestamp time = 5;
+  google.protobuf.Timestamp date = 6;
+  string location = 7;
+  float price = 8;
+  string image = 9;
+  string source = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message ListEventsRes { repeated EventRes events = 1; }
+
+message UserReq {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  string password = 4;
+  bool is_admin = 5;
+}
+
+message UserRes {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  string password = 4;
+  bool is_admin = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ListUsersRes { repeated UserRes users = 1; }
+
+message SessionReq {
+  string id = 1;
+  string user_email = 2;
+  string refresh_token = 3;
+  bool is_revoked = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message SessionRes {
+  string id = 1;
+  string user_email = 2;
+  string refresh_token = 3;
+  bool is_revoked = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+service aggregator {
+  rpc CreateEvent(EventReq) returns (EventRes) {}
+  rpc GetEvent(EventReq) returns (EventRes) {}
+  rpc ListEvents(EventReq) returns (ListEventsRes) {}
+  rpc UpdateEvent(EventReq) returns (EventRes) {}
+  rpc DeleteEvent(EventReq) returns (EventRes) {}
+
+  rpc CreateUser(UserReq) returns (UserRes) {}
+  rpc GetUser(UserReq) returns (UserRes) {}
+  rpc ListUsers(UserReq) returns (ListUsersRes) {}
+  rpc UpdateUser(UserReq) returns (UserRes) {}
+  rpc DeleteUser(UserReq) returns (UserRes) {}
+
+  rpc CreateSession(SessionReq) returns (SessionRes) {}
+  rpc GetSession(SessionReq) returns (SessionRes) {}
+  rpc RevokeSession(SessionReq) returns (SessionRes) {}
+  rpc DeleteSession(SessionReq) returns (SessionRes) {}
+}

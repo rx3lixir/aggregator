@@ -73,11 +73,9 @@ func (s *APIServer) handleUpdateUser(w http.ResponseWriter, r *http.Request) err
 	if updateReq.Password == "" {
 		hashed, err := password.Hash(updateReq.Password)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		user.Password = hashed
-
-		updateReq.Name = user.Password
 	}
 
 	user.UpdateFromReq(updateReq)

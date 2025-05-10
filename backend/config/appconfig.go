@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/rx3lixir/agg-api/internal/lib/logger"
 	"github.com/spf13/viper"
 )
 
@@ -116,7 +115,7 @@ func envBindings() map[string]string {
 }
 
 // New загружает конфигурацию из файла и переменных окружения
-func New(log logger.Logger) (*AppConfig, error) {
+func New() (*AppConfig, error) {
 	v := viper.New()
 
 	// Настройка путей и формата
@@ -155,6 +154,5 @@ func New(log logger.Logger) (*AppConfig, error) {
 		return nil, fmt.Errorf("ошибка валидации конфигурации: %w", err)
 	}
 
-	log.Info("Конфигурация успешно загружена")
 	return &config, nil
 }
